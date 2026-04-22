@@ -16,3 +16,6 @@ Aplikacja mobilna na system Android służąca do dokumentowania wspomnień z po
 - **Baza danych:** Room Persistence Library
 - **Multimedia:** Media3/ExoPlayer (Video/Audio), Coil (Images)
 - **Nawigacja:** Jetpack Compose Navigation
+
+## Dokumentacja
+- **Link** do dokumentacji: https://github.com/YaroslavStarzhynsky/TripKeep-Android/blob/8c1057178c7095af1ca11fb91c4ccabfb1184cd0/TripKeep%20-%20dokumentacja.pdf
