@@ -7,8 +7,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
@@ -28,11 +28,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import pl.yskp.tripkeep.data.local.entities.TripEntity
 import pl.yskp.tripkeep.ui.AppViewModelProvider
+import pl.yskp.tripkeep.ui.navigation.TripKeepScreen
 import pl.yskp.tripkeep.ui.theme.TripKeepOrange
 import pl.yskp.tripkeep.viewmodel.HomeViewModel
 
 @Composable
 fun HomeScreen(
+    onMenuClick: () -> Unit,
+    onProfileClick: () -> Unit,
+    onGalleryClick: () -> Unit,
+    onPlansClick: () -> Unit,
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -41,10 +46,20 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            HomeTopBar()
+            HomeTopBar(
+                onMenuClick = onMenuClick,
+                onProfileClick = onProfileClick,
+                avatarUri = uiState.avatarUri
+            )
         },
         bottomBar = {
-            HomeBottomBar()
+            HomeBottomBar(
+                currentScreen = TripKeepScreen.Home,
+                onHomeClick = {},
+                onGalleryClick = onGalleryClick,
+                onPlansClick = onPlansClick,
+                onProfileClick = onProfileClick
+            )
         },
         containerColor = Color(0xFFF8F9FA)
     ) { innerPadding ->
@@ -105,7 +120,7 @@ fun HomeScreen(
 }
 
 @Composable
-fun HomeTopBar() {
+fun HomeTopBar(onMenuClick: () -> Unit, onProfileClick: () -> Unit, avatarUri: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -114,20 +129,48 @@ fun HomeTopBar() {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = Icons.Default.Menu, contentDescription = null, tint = Color.Gray)
+        IconButton(onClick = onMenuClick) {
+            Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu", tint = Color.Gray)
+        }
         Text(text = "Home", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .background(Color.LightGray, CircleShape)
+        IconButton(
+            onClick = onProfileClick,
+            modifier = Modifier.size(40.dp)
         ) {
-            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.align(Alignment.Center), tint = Color.White)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(Color.LightGray)
+            ) {
+                if (avatarUri.isNotEmpty()) {
+                    AsyncImage(
+                        model = avatarUri,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.align(Alignment.Center),
+                        tint = Color.White
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun HomeBottomBar() {
+fun HomeBottomBar(
+    currentScreen: TripKeepScreen,
+    onHomeClick: () -> Unit,
+    onGalleryClick: () -> Unit,
+    onPlansClick: () -> Unit,
+    onProfileClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -142,10 +185,18 @@ fun HomeBottomBar() {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
-            Icon(Icons.Default.Image, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
-            Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
-            Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+            IconButton(onClick = onHomeClick) {
+                Icon(Icons.Default.Home, contentDescription = null, tint = if (currentScreen == TripKeepScreen.Home) TripKeepOrange else Color.White, modifier = Modifier.size(28.dp))
+            }
+            IconButton(onClick = onGalleryClick) {
+                Icon(Icons.Default.Image, contentDescription = null, tint = if (currentScreen == TripKeepScreen.Gallery) TripKeepOrange else Color.White, modifier = Modifier.size(28.dp))
+            }
+            IconButton(onClick = onPlansClick) {
+                Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = if (currentScreen == TripKeepScreen.Planner) TripKeepOrange else Color.White, modifier = Modifier.size(28.dp))
+            }
+            IconButton(onClick = onProfileClick) {
+                Icon(Icons.Default.Person, contentDescription = null, tint = if (currentScreen == TripKeepScreen.Profile) TripKeepOrange else Color.White, modifier = Modifier.size(28.dp))
+            }
         }
     }
 }

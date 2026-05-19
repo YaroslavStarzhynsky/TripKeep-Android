@@ -5,7 +5,10 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import pl.yskp.tripkeep.TripKeepApplication
+import pl.yskp.tripkeep.viewmodel.DrawerViewModel
 import pl.yskp.tripkeep.viewmodel.HomeViewModel
+import pl.yskp.tripkeep.viewmodel.PlannerViewModel
+import pl.yskp.tripkeep.viewmodel.ProfileViewModel
 import pl.yskp.tripkeep.viewmodel.SetupViewModel
 
 object AppViewModelProvider {
@@ -18,6 +21,23 @@ object AppViewModelProvider {
         }
         initializer {
             SetupViewModel(
+                tripKeepApplication().container.userPreferencesRepository
+            )
+        }
+        initializer {
+            DrawerViewModel(
+                tripKeepApplication().container.userPreferencesRepository
+            )
+        }
+        initializer {
+            ProfileViewModel(
+                tripKeepApplication().container.tripRepository,
+                tripKeepApplication().container.userPreferencesRepository
+            )
+        }
+        initializer {
+            PlannerViewModel(
+                tripKeepApplication().container.tripRepository,
                 tripKeepApplication().container.userPreferencesRepository
             )
         }

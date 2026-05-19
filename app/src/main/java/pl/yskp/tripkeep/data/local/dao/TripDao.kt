@@ -27,6 +27,12 @@ interface TripDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertImage(image: TripImageEntity): Long
 
+    @Query("UPDATE trips SET isPlanned = :isPlanned WHERE tripId = :tripId")
+    suspend fun updateTripStatus(tripId: Long, isPlanned: Boolean)
+
+    @Query("SELECT COUNT(*) FROM trip_images")
+    fun getImageCount(): Flow<Int>
+
     @Delete
     suspend fun deleteTrip(trip: TripEntity)
 }
