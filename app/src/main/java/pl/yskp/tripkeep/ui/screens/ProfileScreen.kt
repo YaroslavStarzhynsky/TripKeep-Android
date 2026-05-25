@@ -9,16 +9,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -41,6 +40,7 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showResetDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -49,6 +49,30 @@ fun ProfileScreen(
             context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             viewModel.updateAvatar(it.toString()) 
         }
+    }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("Resetuj wszystko") },
+            text = { Text("Czy na pewno chcesz usunąć wszystkie dane? Tej operacji nie da się cofnąć.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.resetAllData()
+                        onLogout()
+                        showResetDialog = false
+                    }
+                ) {
+                    Text("Tak, usuń wszystko", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("Anuluj")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -75,7 +99,7 @@ fun ProfileScreen(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Profile Photo - Reduced size
+            // Profile Photo
             Box(
                 modifier = Modifier
                     .size(100.dp)
@@ -120,24 +144,28 @@ fun ProfileScreen(
                 fontWeight = FontWeight.Bold
             )
             
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.LocationOn,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = Color.Gray
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = uiState.userPreferences.userCity.ifEmpty { "Lokalizacja" },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
-                )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (uiState.userPreferences.userCity.isNotBlank()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Rounded.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = TripKeepOrange
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = uiState.userPreferences.userCity,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                        color = Color.Black
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Stats Grid 2x2 - Compact
+            // Stats Grid
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     StatCard(label = "Wyprawy", value = uiState.tripCount.toString(), modifier = Modifier.weight(1f))
@@ -149,14 +177,12 @@ fun ProfileScreen(
                 }
             }
 
-            // Weight pushes everything below this to the bottom
             Spacer(modifier = Modifier.weight(1f))
 
-            // Logout Button - Simplified
+            // Reset Button
             TextButton(
                 onClick = {
-                    viewModel.logout()
-                    onLogout()
+                    showResetDialog = true
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
@@ -165,13 +191,13 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        imageVector = Icons.AutoMirrored.Rounded.Logout,
                         contentDescription = null,
                         tint = Color.Red
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Wyloguj",
+                        text = "Resetuj wszystko",
                         color = Color.Red,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
@@ -185,7 +211,7 @@ fun ProfileScreen(
 @Composable
 fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier.height(85.dp),
+        modifier = modifier.height(85.dp).shadow(6.dp, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
@@ -228,7 +254,6 @@ fun ProfileTopBar(onBackClick: () -> Unit) {
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
         )
 
-        // Empty box for symmetry
         Box(modifier = Modifier.size(40.dp))
     }
 }

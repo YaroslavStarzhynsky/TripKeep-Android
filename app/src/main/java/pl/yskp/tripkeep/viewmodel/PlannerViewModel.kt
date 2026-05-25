@@ -2,10 +2,7 @@ package pl.yskp.tripkeep.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import pl.yskp.tripkeep.data.UserPreferencesRepository
 import pl.yskp.tripkeep.data.local.entities.TripEntity
@@ -31,13 +28,13 @@ class PlannerViewModel(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000L),
+        started = SharingStarted.WhileSubscribed(5_000),
         initialValue = PlannerUiState()
     )
 
     fun markAsRealized(tripId: Long) {
         viewModelScope.launch {
-            tripRepository.updateTripStatus(tripId, false)
+            tripRepository.updateTripStatus(tripId, isPlanned = false)
         }
     }
 }

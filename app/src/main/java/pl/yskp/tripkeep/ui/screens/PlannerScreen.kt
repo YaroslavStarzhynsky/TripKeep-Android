@@ -9,18 +9,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddCircleOutline
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -28,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 import pl.yskp.tripkeep.data.local.entities.TripEntity
 import pl.yskp.tripkeep.ui.AppViewModelProvider
 import pl.yskp.tripkeep.ui.navigation.TripKeepScreen
@@ -43,11 +39,15 @@ fun PlannerScreen(
     onGalleryClick: () -> Unit,
     onProfileClick: () -> Unit,
     onRealizedClick: (Long) -> Unit,
+    onTripClick: (Long) -> Unit,
     viewModel: PlannerViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             PlannerTopBar(
                 onBackClick = onBackClick,
@@ -79,6 +79,7 @@ fun PlannerScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp)
+                    .shadow(6.dp, RoundedCornerShape(24.dp))
                     .clickable { onAddTripClick() },
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -98,7 +99,7 @@ fun PlannerScreen(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Icon(
-                        imageVector = Icons.Default.AddCircleOutline,
+                        imageVector = Icons.Rounded.AddCircleOutline,
                         contentDescription = null,
                         tint = Color.Black,
                         modifier = Modifier.size(24.dp)
@@ -116,9 +117,19 @@ fun PlannerScreen(
                 items(uiState.plannedTrips) { trip ->
                     PlannerTripCard(
                         trip = trip,
+                        onClick = { onTripClick(trip.tripId) },
                         onCheckClick = {
                             viewModel.markAsRealized(trip.tripId)
-                            onRealizedClick(trip.tripId)
+                            scope.launch {
+                                val result = snackbarHostState.showSnackbar(
+                                    message = "Wycieczka zrealizowana!",
+                                    actionLabel = "Dodaj opis",
+                                    duration = SnackbarDuration.Short
+                                )
+                                if (result == SnackbarResult.ActionPerformed) {
+                                    onRealizedClick(trip.tripId)
+                                }
+                            }
                         }
                     )
                 }
@@ -169,7 +180,7 @@ fun PlannerTopBar(
                     )
                 } else {
                     Icon(
-                        Icons.Default.Person,
+                        Icons.Rounded.Person,
                         contentDescription = null,
                         modifier = Modifier.align(Alignment.Center),
                         tint = Color.White
@@ -183,12 +194,17 @@ fun PlannerTopBar(
 @Composable
 fun PlannerTripCard(
     trip: TripEntity,
+    onClick: () -> Unit,
     onCheckClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(6.dp, RoundedCornerShape(24.dp))
+            .clickable { onClick() },
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -196,7 +212,6 @@ fun PlannerTripCard(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Trip Image Placeholder/Image
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -212,7 +227,7 @@ fun PlannerTripCard(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Default.CalendarMonth,
+                        imageVector = Icons.Rounded.CalendarMonth,
                         contentDescription = null,
                         modifier = Modifier
                             .size(32.dp)
@@ -230,18 +245,21 @@ fun PlannerTripCard(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Default.LocationOn,
+                        imageVector = Icons.Rounded.LocationOn,
                         contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = Color.Gray
+                        modifier = Modifier.size(16.dp),
+                        tint = TripKeepOrange
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = trip.location,
+                        text = if (trip.location.isBlank()) "Brak lokalizacji" else trip.location,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                        color = Color.Black
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -262,7 +280,7 @@ fun PlannerTripCard(
                     .background(Color(0xFFF1F1F1), CircleShape)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Check,
+                    imageVector = Icons.Rounded.Check,
                     contentDescription = "Mark as realized",
                     tint = Color(0xFF4CAF50)
                 )

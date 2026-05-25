@@ -1,17 +1,18 @@
 package pl.yskp.tripkeep.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -19,9 +20,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -31,6 +35,8 @@ import pl.yskp.tripkeep.ui.AppViewModelProvider
 import pl.yskp.tripkeep.ui.navigation.TripKeepScreen
 import pl.yskp.tripkeep.ui.theme.TripKeepOrange
 import pl.yskp.tripkeep.viewmodel.HomeViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun HomeScreen(
@@ -38,11 +44,13 @@ fun HomeScreen(
     onProfileClick: () -> Unit,
     onGalleryClick: () -> Unit,
     onPlansClick: () -> Unit,
+    onTripClick: (Long) -> Unit,
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val memories by viewModel.memories.collectAsState()
     val plans by viewModel.plans.collectAsState()
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
@@ -67,14 +75,16 @@ fun HomeScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(horizontal = 24.dp)
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
             Text(
                 text = "Hej, ${uiState.userName.ifEmpty { "Podróżniku" }}",
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    color = Color.Black
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
                 )
             )
             Text(
@@ -86,35 +96,53 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            SectionHeader(title = "Ostatnie podróże")
+            SectionHeader(
+                title = "Ostatnie podróże",
+                onSeeAllClick = onGalleryClick
+            )
             
             Spacer(modifier = Modifier.height(16.dp))
             
             if (memories.isEmpty()) {
                 EmptyStateCard(text = "Brak wspomnień. Dodaj swoją pierwszą wyprawę!")
             } else {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
                     items(memories) { trip ->
-                        MemoryCard(trip)
+                        MemoryCard(
+                            trip = trip,
+                            onClick = { onTripClick(trip.tripId) },
+                            modifier = Modifier.size(width = 160.dp, height = 220.dp)
+                        )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            SectionHeader(title = "Zaplanowane podróże")
+            SectionHeader(
+                title = "Zaplanowane podróże",
+                onSeeAllClick = onPlansClick
+            )
             
             Spacer(modifier = Modifier.height(16.dp))
             
             if (plans.isEmpty()) {
                 EmptyStateCard(text = "Nic jeszcze nie zaplanowano.")
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    plans.take(2).forEach { trip ->
-                        PlanItem(trip)
-                    }
+                val nearestPlan = plans.minByOrNull { it.dateTimestamp }
+                nearestPlan?.let { trip ->
+                    MemoryCard(
+                        trip = trip,
+                        onClick = { onTripClick(trip.tripId) },
+                        modifier = Modifier.fillMaxWidth().height(240.dp)
+                    )
                 }
             }
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -152,7 +180,7 @@ fun HomeTopBar(onMenuClick: () -> Unit, onProfileClick: () -> Unit, avatarUri: S
                     )
                 } else {
                     Icon(
-                        Icons.Default.Person,
+                        Icons.Rounded.Person,
                         contentDescription = null,
                         modifier = Modifier.align(Alignment.Center),
                         tint = Color.White
@@ -171,38 +199,46 @@ fun HomeBottomBar(
     onPlansClick: () -> Unit,
     onProfileClick: () -> Unit
 ) {
+    // Transparent wrapper to prevent white background under the pill
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 24.dp)
-            .height(70.dp)
-            .background(Color.Black, RoundedCornerShape(35.dp)),
-        contentAlignment = Alignment.Center
+            .background(Color.Transparent)
+            .padding(horizontal = 24.dp, vertical = 12.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(70.dp)
+                .shadow(12.dp, RoundedCornerShape(35.dp))
+                .background(Color.Black, RoundedCornerShape(35.dp)),
+            contentAlignment = Alignment.Center
         ) {
-            IconButton(onClick = onHomeClick) {
-                Icon(Icons.Default.Home, contentDescription = null, tint = if (currentScreen == TripKeepScreen.Home) TripKeepOrange else Color.White, modifier = Modifier.size(28.dp))
-            }
-            IconButton(onClick = onGalleryClick) {
-                Icon(Icons.Default.Image, contentDescription = null, tint = if (currentScreen == TripKeepScreen.Gallery) TripKeepOrange else Color.White, modifier = Modifier.size(28.dp))
-            }
-            IconButton(onClick = onPlansClick) {
-                Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = if (currentScreen == TripKeepScreen.Planner) TripKeepOrange else Color.White, modifier = Modifier.size(28.dp))
-            }
-            IconButton(onClick = onProfileClick) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = if (currentScreen == TripKeepScreen.Profile) TripKeepOrange else Color.White, modifier = Modifier.size(28.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onHomeClick) {
+                    Icon(Icons.Rounded.Home, contentDescription = null, tint = if (currentScreen == TripKeepScreen.Home) TripKeepOrange else Color.White, modifier = Modifier.size(28.dp))
+                }
+                IconButton(onClick = onGalleryClick) {
+                    Icon(Icons.Rounded.Image, contentDescription = null, tint = if (currentScreen == TripKeepScreen.Gallery) TripKeepOrange else Color.White, modifier = Modifier.size(28.dp))
+                }
+                IconButton(onClick = onPlansClick) {
+                    Icon(Icons.Rounded.CalendarMonth, contentDescription = null, tint = if (currentScreen == TripKeepScreen.Planner) TripKeepOrange else Color.White, modifier = Modifier.size(28.dp))
+                }
+                IconButton(onClick = onProfileClick) {
+                    Icon(Icons.Rounded.Person, contentDescription = null, tint = if (currentScreen == TripKeepScreen.Profile) TripKeepOrange else Color.White, modifier = Modifier.size(28.dp))
+                }
             }
         }
     }
 }
 
 @Composable
-fun SectionHeader(title: String) {
+fun SectionHeader(title: String, onSeeAllClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -215,59 +251,111 @@ fun SectionHeader(title: String) {
                 color = Color.Black
             )
         )
-        Text(
-            text = "Zobacz wszystkie",
-            style = MaterialTheme.typography.bodySmall.copy(
-                color = TripKeepOrange,
-                fontWeight = FontWeight.SemiBold
+        TextButton(onClick = onSeeAllClick) {
+            Text(
+                text = "Zobacz wszystkie",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = TripKeepOrange,
+                    fontWeight = FontWeight.SemiBold
+                )
             )
-        )
-    }
-}
-
-@Composable
-fun MemoryCard(trip: TripEntity) {
-    Card(
-        modifier = Modifier.size(width = 160.dp, height = 220.dp),
-        shape = RoundedCornerShape(24.dp)
-    ) {
-        Box {
-            AsyncImage(
-                model = trip.mainImageUri,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(12.dp)
-            ) {
-                Text(text = trip.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text(text = trip.location, color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
-            }
         }
     }
 }
 
 @Composable
-fun PlanItem(trip: TripEntity) {
+fun MemoryCard(trip: TripEntity, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier.fillMaxWidth().height(80.dp),
-        shape = RoundedCornerShape(20.dp),
+        modifier = modifier
+            .sizeIn(minWidth = 160.dp, minHeight = 220.dp)
+            .shadow(elevation = 6.dp, shape = RoundedCornerShape(24.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
-            AsyncImage(
-                model = trip.mainImageUri,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)),
-                contentScale = ContentScale.Crop
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (trip.mainImageUri.isNotEmpty()) {
+                AsyncImage(
+                    model = trip.mainImageUri,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                // Structured Placeholder
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFF5F5F5)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ImageNotSupported,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.LightGray
+                    )
+                }
+            }
+
+            // Gradient Overlay
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+                        )
+                    )
             )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(text = trip.title, fontWeight = FontWeight.Bold, color = Color.Black)
-                Text(text = trip.location, color = Color.Gray, fontSize = 12.sp)
+            
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = trip.title,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val formattedDate = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(trip.dateTimestamp))
+                    
+                    if (trip.location.isNotBlank()) {
+                        Icon(
+                            imageVector = Icons.Rounded.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = TripKeepOrange
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        
+                        Text(
+                            text = "${trip.location} • $formattedDate",
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 10.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    } else {
+                        Text(
+                            text = formattedDate,
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 10.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }
@@ -278,7 +366,8 @@ fun EmptyStateCard(text: String) {
     Card(
         modifier = Modifier.fillMaxWidth().height(100.dp),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.5f))
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Text(text = text, color = Color.Gray, fontSize = 14.sp)

@@ -1,36 +1,39 @@
 package pl.yskp.tripkeep.ui.navigation
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.*
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import pl.yskp.tripkeep.R
 import pl.yskp.tripkeep.ui.AppViewModelProvider
-import pl.yskp.tripkeep.ui.screens.HomeScreen
-import pl.yskp.tripkeep.ui.screens.PlannerScreen
-import pl.yskp.tripkeep.ui.screens.ProfileScreen
-import pl.yskp.tripkeep.ui.screens.SetupScreen
-import pl.yskp.tripkeep.ui.screens.WelcomeScreen
+import pl.yskp.tripkeep.ui.screens.*
 import pl.yskp.tripkeep.ui.theme.TripKeepOrange
 import pl.yskp.tripkeep.viewmodel.DrawerViewModel
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 
 enum class TripKeepScreen {
     Welcome,
@@ -39,7 +42,9 @@ enum class TripKeepScreen {
     Gallery,
     Planner,
     Profile,
-    Details
+    Details,
+    AddTrip,
+    About
 }
 
 @Composable
@@ -52,6 +57,11 @@ fun TripKeepNavHost(
     val scope = rememberCoroutineScope()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    var showAboutDialog by remember { mutableStateOf(false) }
+
+    if (showAboutDialog) {
+        AboutAppDialog(onDismiss = { showAboutDialog = false })
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -61,17 +71,11 @@ fun TripKeepNavHost(
                 selectedRoute = currentRoute,
                 onItemClick = { screen ->
                     scope.launch { drawerState.close() }
-                    if (screen.name != currentRoute) {
+                    if (screen == TripKeepScreen.About) {
+                        showAboutDialog = true
+                    } else if (screen.name != currentRoute) {
                         navController.navigate(screen.name) {
                             launchSingleTop = true
-                        }
-                    }
-                },
-                onLogoutClick = {
-                    scope.launch { 
-                        drawerState.close()
-                        navController.navigate(TripKeepScreen.Welcome.name) {
-                            popUpTo(0) { inclusive = true }
                         }
                     }
                 }
@@ -112,6 +116,9 @@ fun TripKeepNavHost(
                     },
                     onPlansClick = {
                         navController.navigate(TripKeepScreen.Planner.name)
+                    },
+                    onTripClick = { tripId ->
+                        navController.navigate("${TripKeepScreen.Details.name}/$tripId")
                     }
                 )
             }
@@ -143,7 +150,7 @@ fun TripKeepNavHost(
                         }
                     },
                     onAddTripClick = {
-                        // navController.navigate(TripKeepScreen.AddTrip.name)
+                        navController.navigate(TripKeepScreen.AddTrip.name)
                     },
                     onHomeClick = {
                         navController.navigate(TripKeepScreen.Home.name)
@@ -155,13 +162,51 @@ fun TripKeepNavHost(
                         navController.navigate(TripKeepScreen.Profile.name)
                     },
                     onRealizedClick = { tripId ->
-                        // navController.navigate("${TripKeepScreen.Details.name}/$tripId/edit")
+                        navController.navigate("${TripKeepScreen.AddTrip.name}?tripId=$tripId")
+                    },
+                    onTripClick = { tripId ->
+                        navController.navigate("${TripKeepScreen.Details.name}/$tripId")
                     }
                 )
             }
-            // Placeholders for other screens
-            composable(route = TripKeepScreen.Gallery.name) { }
-            composable(route = TripKeepScreen.Details.name) { }
+            composable(
+                route = "${TripKeepScreen.AddTrip.name}?tripId={tripId}",
+                arguments = listOf(
+                    navArgument("tripId") {
+                        type = NavType.LongType
+                        defaultValue = -1L
+                    }
+                )
+            ) {
+                AddTripScreen(
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+            composable(route = TripKeepScreen.Gallery.name) {
+                GalleryScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onHomeClick = { navController.navigate(TripKeepScreen.Home.name) },
+                    onPlansClick = { navController.navigate(TripKeepScreen.Planner.name) },
+                    onProfileClick = { navController.navigate(TripKeepScreen.Profile.name) },
+                    onTripClick = { tripId ->
+                        navController.navigate("${TripKeepScreen.Details.name}/$tripId")
+                    },
+                    onAddClick = {
+                        navController.navigate(TripKeepScreen.AddTrip.name)
+                    }
+                )
+            }
+            composable(
+                route = "${TripKeepScreen.Details.name}/{tripId}",
+                arguments = listOf(navArgument("tripId") { type = NavType.LongType })
+            ) {
+                TripDetailsScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onEditClick = { tripId ->
+                        navController.navigate("${TripKeepScreen.AddTrip.name}?tripId=$tripId")
+                    }
+                )
+            }
         }
     }
 }
@@ -170,8 +215,7 @@ fun TripKeepNavHost(
 fun TripKeepDrawerContent(
     selectedRoute: String?,
     viewModel: DrawerViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    onItemClick: (TripKeepScreen) -> Unit,
-    onLogoutClick: () -> Unit
+    onItemClick: (TripKeepScreen) -> Unit
 ) {
     val userPrefs by viewModel.userPreferences.collectAsState()
 
@@ -185,7 +229,6 @@ fun TripKeepDrawerContent(
                 .fillMaxSize()
                 .padding(24.dp)
         ) {
-            // Profile Header
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -202,7 +245,7 @@ fun TripKeepDrawerContent(
                         )
                     } else {
                         Icon(
-                            Icons.Default.Person,
+                            Icons.Rounded.Person,
                             contentDescription = null,
                             modifier = Modifier.align(Alignment.Center),
                             tint = Color.White
@@ -226,21 +269,27 @@ fun TripKeepDrawerContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Navigation List
             val items = listOf(
-                Triple("Home", Icons.Default.Home, TripKeepScreen.Home),
-                Triple("Galeria", Icons.Default.Image, TripKeepScreen.Gallery),
-                Triple("Plany", Icons.Default.CalendarMonth, TripKeepScreen.Planner),
-                Triple("Konto", Icons.Default.Person, TripKeepScreen.Profile)
+                Triple("Home", Icons.Rounded.Home, TripKeepScreen.Home),
+                Triple("Galeria", Icons.Rounded.Image, TripKeepScreen.Gallery),
+                Triple("Plany", Icons.Rounded.CalendarMonth, TripKeepScreen.Planner),
+                Triple("Konto", Icons.Rounded.Person, TripKeepScreen.Profile),
+                Triple("O aplikacji", Icons.Rounded.Info, TripKeepScreen.About)
             )
 
             items.forEach { (label, icon, screen) ->
                 NavigationDrawerItem(
-                    label = { Text(label) },
+                    label = { 
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = if (selectedRoute == screen.name) FontWeight.Bold else FontWeight.Medium
+                        ) 
+                    },
                     selected = selectedRoute == screen.name,
                     onClick = { onItemClick(screen) },
                     icon = { Icon(icon, contentDescription = null) },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(24.dp),
                     colors = NavigationDrawerItemDefaults.colors(
                         selectedContainerColor = TripKeepOrange.copy(alpha = 0.1f),
                         unselectedContainerColor = Color.Transparent,
@@ -252,24 +301,104 @@ fun TripKeepDrawerContent(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Logout Button
-            TextButton(
-                onClick = onLogoutClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = Color.Red)
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text("Wyloguj", color = Color.Red)
-                }
+@Composable
+fun AboutAppDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            val resId = context.resources.getIdentifier("app_audio", "raw", context.packageName)
+            if (resId != 0) {
+                val audioUri = Uri.parse("android.resource://${context.packageName}/$resId")
+                setMediaItem(MediaItem.fromUri(audioUri))
+                prepare()
             }
         }
     }
+    var isPlaying by remember { mutableStateOf(false) }
+
+    DisposableEffect(exoPlayer) {
+        onDispose {
+            exoPlayer.stop()
+            exoPlayer.release()
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = {
+            exoPlayer.pause()
+            onDismiss()
+        },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = Color.White,
+        title = {
+            Text(
+                text = "TripKeep v1.0",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Twórcy: Yaroslav Starzhynskyi & Krzysztof Pawlaczek\n\n" +
+                            "Gratulujemy odnalezienia tej sekcji! Stworzyliśmy TripKeep, aby pomóc Ci zachować najważniejsze momenty z Twoich wypraw. W nagrodę przygotowaliśmy dla Ciebie dźwiękowy klimat podróży.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.DarkGray,
+                    textAlign = TextAlign.Start
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                IconButton(
+                    onClick = {
+                        if (isPlaying) {
+                            exoPlayer.pause()
+                        } else {
+                            exoPlayer.play()
+                        }
+                        isPlaying = !isPlaying
+                    },
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(TripKeepOrange.copy(alpha = 0.1f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Rounded.PauseCircle else Icons.Rounded.PlayCircle,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        tint = TripKeepOrange,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Text(
+                    text = "Kod źródłowy:",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "https://github.com/YaroslavStarzhynsky/TripKeep-Android",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TripKeepOrange,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                exoPlayer.pause()
+                onDismiss()
+            }) {
+                Text("Zamknij", color = TripKeepOrange, fontWeight = FontWeight.Bold)
+            }
+        }
+    )
 }

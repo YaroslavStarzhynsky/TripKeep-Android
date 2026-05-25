@@ -5,16 +5,16 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
-import pl.yskp.tripkeep.data.UserPreferences
-import pl.yskp.tripkeep.data.UserPreferencesRepository
+import pl.yskp.tripkeep.data.local.entities.TripEntity
+import pl.yskp.tripkeep.data.repository.TripRepository
 
-class DrawerViewModel(
-    userPreferencesRepository: UserPreferencesRepository
+class GalleryViewModel(
+    private val tripRepository: TripRepository
 ) : ViewModel() {
-    val userPreferences: StateFlow<UserPreferences> = userPreferencesRepository.userPreferencesFlow
+    val memories: StateFlow<List<TripEntity>> = tripRepository.getAllMemoriesStream()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = UserPreferences()
+            initialValue = emptyList()
         )
 }

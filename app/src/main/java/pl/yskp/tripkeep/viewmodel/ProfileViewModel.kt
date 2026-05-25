@@ -24,36 +24,43 @@ class ProfileViewModel(
     val uiState: StateFlow<ProfileUiState> = combine(
         userPreferencesRepository.userPreferencesFlow,
         tripRepository.getAllMemoriesStream(),
-        tripRepository.getAllPlansStream(),
-        tripRepository.getImageCountStream()
-    ) { prefs, memories, plans, imageCount ->
+        tripRepository.getImageCountStream(),
+        tripRepository.getAllPlansStream()
+    ) { prefs, memories, images, plans ->
         ProfileUiState(
             userPreferences = prefs,
             tripCount = memories.size,
-            photoCount = imageCount,
+            photoCount = images, // Total records in trip_images table
             countryCount = memories.map { it.location.split(",").last().trim() }.distinct().size,
             planCount = plans.size
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000L),
+        started = SharingStarted.WhileSubscribed(5_000),
         initialValue = ProfileUiState()
     )
-
-    fun logout() {
-        viewModelScope.launch {
-            userPreferencesRepository.clearUserPreferences()
-        }
-    }
 
     fun updateAvatar(uri: String) {
         viewModelScope.launch {
             val current = uiState.value.userPreferences
             userPreferencesRepository.saveUserPreferences(
-                current.userName,
-                current.userCity,
-                uri
+                userName = current.userName,
+                userCity = current.userCity,
+                userAvatarUri = uri
             )
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            userPreferencesRepository.saveUserPreferences("", "", "")
+        }
+    }
+
+    fun resetAllData() {
+        viewModelScope.launch {
+            userPreferencesRepository.saveUserPreferences("", "", "")
+            tripRepository.deleteAll()
         }
     }
 }
