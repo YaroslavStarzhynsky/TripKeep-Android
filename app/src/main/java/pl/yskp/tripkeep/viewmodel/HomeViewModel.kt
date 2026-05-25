@@ -12,6 +12,7 @@ import pl.yskp.tripkeep.data.repository.TripRepository
 
 data class HomeUiState(
     val userName: String = "",
+    val avatarUri: String = "",
     val memories: List<TripEntity> = emptyList(),
     val plans: List<TripEntity> = emptyList()
 )
@@ -23,7 +24,10 @@ class HomeViewModel(
 
     val uiState: StateFlow<HomeUiState> = userPreferencesRepository.userPreferencesFlow
         .map { preferences ->
-            HomeUiState(userName = preferences.userName)
+            HomeUiState(
+                userName = preferences.userName,
+                avatarUri = preferences.userAvatarUri
+            )
         }
         .stateIn(
             scope = viewModelScope,
