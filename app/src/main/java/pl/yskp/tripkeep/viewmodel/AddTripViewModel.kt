@@ -91,6 +91,8 @@ class AddTripViewModel(
         val savedId = if (currentTripId == 0L) {
             tripRepository.insertTrip(trip)
         } else {
+            // Fix: Clear existing images before updating to prevent duplication
+            tripRepository.deleteImagesForTrip(currentTripId)
             tripRepository.updateTrip(trip)
             currentTripId
         }
