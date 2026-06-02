@@ -51,4 +51,10 @@ class UserPreferencesRepository(
             preferences[USER_AVATAR_URI] = userAvatarUri
         }
     }
+
+    suspend fun clearUserPreferences() {
+        dataStore.edit { preferences ->
+            preferences.clear()
+        }
+    }
 }
