@@ -31,7 +31,10 @@ class ProfileViewModel(
             userPreferences = prefs,
             tripCount = memories.size,
             photoCount = images, // Total records in trip_images table
-            countryCount = memories.map { it.location.split(",").last().trim() }.distinct().size,
+            countryCount = memories.map { it.location.trim().lowercase() }
+                .filter { it.isNotBlank() && it != "nie podano lokalizacji" }
+                .map { it.substringAfterLast(",").trim() }
+                .distinct().size,
             planCount = plans.size
         )
     }.stateIn(

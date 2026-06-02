@@ -40,6 +40,9 @@ interface TripDao {
     @Query("SELECT COUNT(*) FROM trip_images")
     fun getImageCount(): Flow<Int>
 
+    @Query("DELETE FROM trip_images WHERE ownerTripId = :tripId")
+    suspend fun deleteImagesForTrip(tripId: Long)
+
     @Query("DELETE FROM trips")
     suspend fun deleteAllTrips()
 

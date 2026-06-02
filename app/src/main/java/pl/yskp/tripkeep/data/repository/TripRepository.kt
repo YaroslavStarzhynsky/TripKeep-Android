@@ -14,6 +14,7 @@ interface TripRepository {
     suspend fun insertTrip(trip: TripEntity): Long
     suspend fun updateTrip(trip: TripEntity)
     suspend fun insertImage(image: TripImageEntity): Long
+    suspend fun deleteImagesForTrip(tripId: Long)
     suspend fun updateTripStatus(tripId: Long, isPlanned: Boolean)
     suspend fun deleteTrip(trip: TripEntity)
     suspend fun deleteAll()
@@ -28,6 +29,7 @@ class OfflineTripRepository(private val tripDao: TripDao) : TripRepository {
     override suspend fun insertTrip(trip: TripEntity): Long = tripDao.insertTrip(trip)
     override suspend fun updateTrip(trip: TripEntity) = tripDao.updateTrip(trip)
     override suspend fun insertImage(image: TripImageEntity): Long = tripDao.insertImage(image)
+    override suspend fun deleteImagesForTrip(tripId: Long) = tripDao.deleteImagesForTrip(tripId)
     override suspend fun updateTripStatus(tripId: Long, isPlanned: Boolean) = tripDao.updateTripStatus(tripId, isPlanned)
     override suspend fun deleteTrip(trip: TripEntity) = tripDao.deleteTrip(trip)
     override suspend fun deleteAll() = tripDao.deleteAllTrips()
