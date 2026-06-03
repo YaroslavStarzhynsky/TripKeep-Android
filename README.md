@@ -18,4 +18,4 @@ Aplikacja mobilna na system Android służąca do dokumentowania wspomnień z po
 - **Nawigacja:** Jetpack Compose Navigation
 
 ## 📄 Dokumentacja
-- **Link** do dokumentacji:https://github.com/YaroslavStarzhynsky/TripKeep-Android/blob/4c91b000b9db167a795416e4cd952bedd674e0d9/TripKeep%20-%20dokumentacja.pdf
+- **Link** do dokumentacji: https://github.com/YaroslavStarzhynsky/TripKeep-Android/blob/4c91b000b9db167a795416e4cd952bedd674e0d9/TripKeep%20-%20dokumentacja.pdf
