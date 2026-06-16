@@ -1,6 +1,7 @@
 package pl.yskp.tripkeep.ui.navigation
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -30,6 +31,7 @@ import kotlinx.coroutines.launch
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import pl.yskp.tripkeep.R
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import pl.yskp.tripkeep.ui.AppViewModelProvider
 import pl.yskp.tripkeep.ui.screens.*
 import pl.yskp.tripkeep.ui.theme.TripKeepOrange
@@ -59,6 +61,24 @@ fun TripKeepNavHost(
     val currentRoute = navBackStackEntry?.destination?.route
     var showAboutDialog by remember { mutableStateOf(false) }
 
+    // Navigation helper for tabs
+    val navigateToTab = { screen: TripKeepScreen ->
+        navController.navigate(screen.name) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    // Close drawer on back press if it's open
+    if (drawerState.isOpen) {
+        BackHandler {
+            scope.launch { drawerState.close() }
+        }
+    }
+
     if (showAboutDialog) {
         AboutAppDialog(onDismiss = { showAboutDialog = false })
     }
@@ -74,9 +94,7 @@ fun TripKeepNavHost(
                     if (screen == TripKeepScreen.About) {
                         showAboutDialog = true
                     } else if (screen.name != currentRoute) {
-                        navController.navigate(screen.name) {
-                            launchSingleTop = true
-                        }
+                        navigateToTab(screen)
                     }
                 }
             )
@@ -109,13 +127,13 @@ fun TripKeepNavHost(
                         scope.launch { drawerState.open() }
                     },
                     onProfileClick = {
-                        navController.navigate(TripKeepScreen.Profile.name)
+                        navigateToTab(TripKeepScreen.Profile)
                     },
                     onGalleryClick = {
-                        navController.navigate(TripKeepScreen.Gallery.name)
+                        navigateToTab(TripKeepScreen.Gallery)
                     },
                     onPlansClick = {
-                        navController.navigate(TripKeepScreen.Planner.name)
+                        navigateToTab(TripKeepScreen.Planner)
                     },
                     onTripClick = { tripId ->
                         navController.navigate("${TripKeepScreen.Details.name}/$tripId")
@@ -125,15 +143,13 @@ fun TripKeepNavHost(
             composable(route = TripKeepScreen.Profile.name) {
                 ProfileScreen(
                     onHomeClick = {
-                        navController.navigate(TripKeepScreen.Home.name) {
-                            popUpTo(TripKeepScreen.Home.name) { inclusive = true }
-                        }
+                        navigateToTab(TripKeepScreen.Home)
                     },
                     onGalleryClick = {
-                        navController.navigate(TripKeepScreen.Gallery.name)
+                        navigateToTab(TripKeepScreen.Gallery)
                     },
                     onPlansClick = {
-                        navController.navigate(TripKeepScreen.Planner.name)
+                        navigateToTab(TripKeepScreen.Planner)
                     },
                     onLogout = {
                         navController.navigate(TripKeepScreen.Welcome.name) {
@@ -145,21 +161,19 @@ fun TripKeepNavHost(
             composable(route = TripKeepScreen.Planner.name) {
                 PlannerScreen(
                     onBackClick = {
-                        navController.navigate(TripKeepScreen.Home.name) {
-                            popUpTo(TripKeepScreen.Home.name) { inclusive = true }
-                        }
+                        navController.popBackStack()
                     },
                     onAddTripClick = {
                         navController.navigate(TripKeepScreen.AddTrip.name)
                     },
                     onHomeClick = {
-                        navController.navigate(TripKeepScreen.Home.name)
+                        navigateToTab(TripKeepScreen.Home)
                     },
                     onGalleryClick = {
-                        navController.navigate(TripKeepScreen.Gallery.name)
+                        navigateToTab(TripKeepScreen.Gallery)
                     },
                     onProfileClick = {
-                        navController.navigate(TripKeepScreen.Profile.name)
+                        navigateToTab(TripKeepScreen.Profile)
                     },
                     onRealizedClick = { tripId ->
                         navController.navigate("${TripKeepScreen.AddTrip.name}?tripId=$tripId")
@@ -185,9 +199,9 @@ fun TripKeepNavHost(
             composable(route = TripKeepScreen.Gallery.name) {
                 GalleryScreen(
                     onBackClick = { navController.popBackStack() },
-                    onHomeClick = { navController.navigate(TripKeepScreen.Home.name) },
-                    onPlansClick = { navController.navigate(TripKeepScreen.Planner.name) },
-                    onProfileClick = { navController.navigate(TripKeepScreen.Profile.name) },
+                    onHomeClick = { navigateToTab(TripKeepScreen.Home) },
+                    onPlansClick = { navigateToTab(TripKeepScreen.Planner) },
+                    onProfileClick = { navigateToTab(TripKeepScreen.Profile) },
                     onTripClick = { tripId ->
                         navController.navigate("${TripKeepScreen.Details.name}/$tripId")
                     },
